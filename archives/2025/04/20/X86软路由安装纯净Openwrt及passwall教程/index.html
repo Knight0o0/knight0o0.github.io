@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的软路由折腾记：X86 OpenWrt安装与PassWall配置</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px; /* Add some space between articles */
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+            text-align: center;
+            margin-top: 30px;
+        }
+        .article-section {
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .article-section:last-child {
+            border-bottom: none;
+        }
+        .code-block {
+            background-color: #eef;
+            border-left: 5px solid #0056b3;
+            padding: 15px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffeeba;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+            font-weight: bold;
+        }
+        .tip-box {
+            background-color: #d1ecf1;
+            border-left: 5px solid #bee5eb;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #0c5460;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ol {
+            counter-reset: my-awesome-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+        ol li {
+            position: relative;
+            margin-bottom: 15px;
+            padding-left: 30px;
+        }
+        ol li::before {
+            content: counter(my-awesome-counter) ".";
+            counter-increment: my-awesome-counter;
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-weight: bold;
+            color: #0056b3;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>我的软路由折腾记：X86 OpenWrt安装与PassWall配置</h1>
+
+        <p>大家好！最近一直在折腾软路由，特别是X86架构的设备，因为它的性能潜力真是让人惊喜。今天，想和大家分享一下我个人在X86软路由上安装纯净版OpenWrt并配置PassWall的全过程。这个教程是基于我自己的实践经验总结出来的，希望能帮到同样对此感兴趣的朋友们。</p>
+
+        <div class="warning-box">
+            <strong>重要提示：</strong> 在进行任何系统修改前，请务必备份好重要数据！软路由配置涉及网络设置，操作不当可能会导致网络中断，请务必仔细阅读并小心操作。
+        </div>
+
+        <ol>
+            <li>
+                <h3>第一步：下载OpenWrt固件</h3>
+                <p>首先，我们需要下载适合X86架构的OpenWrt固件。我个人推荐从 <a href="https://downloads.immortalwrt.org/" target="_blank">ImmortalWrt官网</a> 下载。进入网站后，找到X86分类，然后选择并下载 `squashfs-combined` 版本的固件。这个版本通常包含了引导和文件系统，适合直接写入硬盘。</p>
+                <div class="tip-box">
+                    <strong>小贴士：</strong> 固件版本众多，如果遇到问题，可以尝试下载其他稳定版本或社区推荐版本。
+                </div>
+            </li>
+
+            <li>
+                <h3>第二步：安装与首次配置</h3>
+                <p>固件下载完成后，需要将其写入您的X86软路由硬盘（通常通过Ventoy或Rufus制作启动盘进行烧录）。启动软路由后，进入OpenWrt的命令行界面。</p>
+                <p>初次进入系统，通常会提示设置<code>root</code>用户的密码。务必设置一个强密码，并牢记！这是您以后管理路由器的关键。</p>
+            </li>
+
+            <li>
+                <h3>第三步：网络接口配置</h3>
+                <p>这一步是关键！需要明确您的软路由的WAN口（连接外部网络）和LAN口（连接内部设备）。</p>
+                <p>首先，在命令行中输入 <code>ip address</code> 命令，查看各个以太网接口（eth0, eth1等）的MAC地址。记下它们的MAC地址，这能帮助您区分物理端口。</p>
+                <p>然后，仔细思考哪个接口作为WAN，哪个作为LAN。通常，连接光猫或上一级路由的接口是WAN，连接家庭内部设备的接口是LAN。</p>
+                <p>接着，输入 <code>vi /etc/config/network</code> 进入网络配置文件进行编辑。这是一个Vim编辑器界面，不熟悉Vim的朋友可以参考以下基本操作：</p>
+                <ul>
+                    <li>按 <code>i</code> 键进入插入模式 (Insert Mode)，即可开始修改内容。</li>
+                    <li>修改完成后，按 <code>Esc</code> 键退出插入模式。</li>
+                    <li>然后输入 <code>:wq</code>（冒号、w、q）并按回车键，保存并退出。</li>
+                    <li>如果不想保存修改，可以输入 <code>:q!</code> 退出。</li>
+                </ul>
+                <div class="code-block">
+                    <pre>
+config interface 'loopback'
+    option device 'lo'
+    option proto 'static'
+    option ipaddr '127.0.0.1'
+    option netmask '255.0.0.0'
+
+config globals 'globals'
+    option ula_prefix 'fdxx:xxxx:xxxx::/48'
+
+config device
+    option name 'br-lan'
+    option type 'bridge'
+    list ifname 'eth0' # 假设eth0是您的LAN口，根据实际情况修改
+    # 您的LAN口IP地址，确保不与主路由冲突
+    option macaddr 'XX:XX:XX:XX:XX:XX' # 填写LAN口MAC地址
+
+config interface 'lan'
+    option device 'br-lan'
+    option proto 'static'
+    option ipaddr '192.168.X.1' # 例如 192.168.1.1，X改为您的希望的IP段
+    option netmask '255.255.255.0'
+    option ip6assign '60'
+
+config device
+    option name 'eth1' # 假设eth1是您的WAN口，根据实际情况修改
+    option macaddr 'YY:YY:YY:YY:YY:YY' # 填写WAN口MAC地址
+
+config interface 'wan'
+    option device 'eth1'
+    option proto 'dhcp' # 也可以选择 static 或 pppoe，根据您的网络环境配置
+
+config interface 'wan6'
+    option device 'eth1'
+    option proto 'dhcpv6'
+                    </pre>
+                </div>
+                <p>修改完成后，务必仔细检查，确保WAN和LAN接口的配置正确，特别是IP地址不要和您现有网络的IP地址冲突。</p>
+            </li>
+
+            <li>
+                <h3>第四步：重启系统</h3>
+                <p>保存网络配置后，输入 <code>reboot</code> 命令重启您的软路由，让新的网络配置生效。</p>
+            </li>
+
+            <li>
+                <h3>第五步：更新软件包列表</h3>
+                <p>路由器重启并能正常联网后（可以通过尝试ping一下外部网站，例如 <code>ping baidu.com</code>），我们需要更新一下软件包列表，为后续安装做准备。</p>
+                <div class="code-block">
+                    <pre>opkg update</pre>
+                </div>
+            </li>
+
+            <li>
+                <h3>第六步：安装SFTP服务</h3>
+                <p>为了方便地将文件上传到OpenWrt，我强烈建议安装SFTP服务。这样您就可以通过WinSCP等工具进行文件传输。</p>
+                <div class="code-block">
+                    <pre>opkg install vsftpd openssh-sftp-server</pre>
+                </div>
+            </li>
+
+            <li>
+                <h3>第七步 & 第八步：启动并设置SFTP开机自启</h3>
+                <p>安装完成后，我们需要启动SFTP服务并设置它开机自启，这样每次重启软路由后SFTP都会自动运行。</p>
+                <div class="code-block">
+                    <pre>/etc/init.d/vsftpd enable</pre>
+                    <pre>/etc/init.d/vsftpd start</pre>
+                </div>
+                <div class="tip-box">
+                    <strong>小贴士：</strong> 如果您想确认SFTP是否正在运行，可以尝试使用SFTP客户端连接您的OpenWrt路由器。
+                </div>
+            </li>
+
+            <li>
+                <h3>第九步：下载PassWall所需文件</h3>
+                <p>现在，我们来到安装PassWall的关键一步。访问 <a href="https://github.com/xiaorouji/openwrt-passwall/releases" target="_blank">PassWall的GitHub发布页面</a>，找到最新版本的发行包。通常需要下载以下三个文件：</p>
+                <ul>
+                    <li><code>luci-app-passwall_XXX_all.ipk</code> (主程序)</li>
+                    <li><code>luci-i18n-passwall-zh-cn_XXX_all.ipk</code> (中文语言包)</li>
+                    <li><code>passwall_packages_ipk_x86_64.zip</code> (核心组件和依赖包，注意选择x86_64版本)</li>
+                </ul>
+                <p>下载这些文件后，将 `passwall_packages_ipk_x86_64.zip` 解压，您会得到一大堆 .ipk 文件。然后，通过SFTP（例如使用WinSCP），将这所有下载和解压后的 .ipk 文件，上传到OpenWrt路由器上的一个新建目录，比如我在 `/tmp` 下创建了一个名为 `1` 的目录（即 `/tmp/1`）。</p>
+                <div class="warning-box">
+                    <strong>注意版本匹配：</strong> PassWall版本更新较快，下载时请确保下载的几个文件版本号尽可能一致，以避免兼容性问题。同时，`passwall_packages_ipk_x86_64.zip` 需要选择与您的路由器架构（X86_64）匹配的版本。
+                </div>
+            </li>
+
+            <li>
+                <h3>第十步：进入上传目录</h3>
+                <p>通过SSH连接到OpenWrt路由器，然后进入您刚才上传所有PassWall安装包的目录：</p>
+                <div class="code-block">
+                    <pre>cd /tmp/1</pre>
+                </div>
+            </li>
+
+            <li>
+                <h3>第十一步：批量安装PassWall</h3>
+                <p>最后一步，执行批量安装命令。这个命令会安装当前目录下所有的 `.ipk` 文件。</p>
+                <div class="code-block">
+                    <pre>opkg install *.ipk</pre>
+                </div>
+                <div class="tip-box">
+                    <strong>故障排除：</strong>
+                    <ul>
+                        <li>如果安装过程中出现依赖错误，命令行会提示缺少哪些包。您可以尝试单独安装这些依赖包，或者检查 `passwall_packages_ipk_x86_64.zip` 是否解压完整，并且所有文件都已上传。</li>
+                        <li>安装完成后，通常需要重启路由器（<code>reboot</code>）才能在Web界面看到PassWall的选项。</li>
+                        <li>如果重启后仍然没有看到，可以尝试清理一下浏览器缓存，或者检查OpenWrt的日志（<code>logread</code>）看看是否有相关的错误信息。</li>
+                    </ul>
+                </div>
+            </li>
+        </ol>
+
+        <p>至此，您的X86软路由上的纯净OpenWrt和PassWall就应该安装配置完成了。您现在可以通过浏览器访问OpenWrt的Web界面（通常是您LAN口设置的IP地址，例如 `192.168.1.1`），然后在“服务”或“VPN”菜单下找到PassWall进行详细配置了。祝您折腾愉快，网络畅通无阻！</p>
+        <p>如果在安装过程中遇到任何问题，欢迎在评论区留言交流，我们一起探讨解决！</p>
+    </div>
+
+</body>
+</html>
