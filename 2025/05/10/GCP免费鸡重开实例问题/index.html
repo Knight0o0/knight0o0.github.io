@@ -1,1 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的GCP免费实例烦恼与解答</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        /* Tailwind Customizations */
+        .bg-slate-50 { background-color: #f8fafc; }
+        .text-slate-800 { color: #1e293b; }
+        .text-sky-700 { color: #0369a1; }
+        .text-amber-600 { color: #d97706; }
+        .border-red-500 { border-color: #ef4444; }
+        .border-green-500 { border-color: #22c55e; } /* Green border for good news */
+        .bg-green-50 { background-color: #f0fdf4; } /* Light green background */
+        .text-green-700 { color: #15803d; } /* Darker green text */
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
 
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-sky-700">我和我的 GCP 免费实例：这些日子的小烦恼与大发现</h1>
+            <p class="text-lg text-slate-600 mt-2">分享我的 CPU 变更与流量计费疑惑</p>
+        </header>
+
+        <div class="bg-white shadow-xl rounded-lg p-6 md:p-8">
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-4">我的困惑与初步解答</h2>
+                <p class="mb-4 text-slate-700">最近，我可真是为我的 GCP 免费实例操碎了心！我那台在南卡罗来纳州 (us-east1) 的 `e2-micro` 实例，说起来就是那种最省钱的“免费鸡”，平时用着挺顺手的。但前阵子，我重新启动了一下，发现它的 CPU 竟然从原来的 Intel 变成了 AMD！当时我就懵了，心里直犯嘀咕：这是怎么回事？会不会因为 CPU 变了，GCP 就要开始收我的费了？而且，我一直隐约记得免费实例有 200G 的流量额度，但又不是很确定，所以心里总有点不安。</p>
+                <div class="text-center my-6">
+                    <p class="text-slate-600 italic mb-2">那会儿，我真是挺崩溃的，心情就跟这个表情包一模一样：</p>
+                    <img src="https://emoji.shojo.cn/bili/src/tv_%E5%B0%8F%E7%94%B5%E8%A7%86_%E5%8A%A8%E5%9B%BE//tvgif-%E5%A4%A7%E5%93%AD.gif" 
+                         alt="大哭表情" 
+                         class="mx-auto h-24 w-24 object-contain rounded-md shadow-sm"
+                         onerror="this.onerror=null; this.src='https://placehold.co/100x100/e2e8f0/94a3b8?text=表情占位符'; this.alt='无法加载表情';">
+                </div>
+                <p class="text-slate-700">不过，既然问题摆在面前，我就得想办法解决。我花了一些时间去查资料、琢磨细节，现在总算把这些疑惑都理清楚了。特别是关于流量的新规则，真是让我喜出望外！想把我的“研究成果”分享给大家，说不定你也会遇到同样的问题呢！</p>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-4">我的实例：E2-Micro 的小秘密</h2>
+                <p class="mb-4 text-slate-700">先来说说我的这个 `e2-micro` 实例。它在 GCP 免费层级中是提供给我们免费使用的，配置是 2 个共享 vCPU 和 1GB 内存。喏，这就是我在 GCP 控制台里看到的实例详情截图：</p>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <img src="https://image.dooo.ng/c/2025/05/30/683920d2336de.webp" 
+                             alt="GCP实例截图1" 
+                             class="rounded-lg shadow-md w-full object-contain"
+                             onerror="this.onerror=null; this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=实例截图1加载失败'; this.alt='实例截图1加载失败';">
+                        <p class="text-sm text-center text-slate-500 mt-1">截图 1 (最新的免费层级流量规则)</p>
+                    </div>
+                    <div>
+                        <img src="https://image.dooo.ng/c/2025/04/18/680248c9b69e2.webp" 
+                             alt="GCP实例截图2" 
+                             class="rounded-lg shadow-md w-full object-contain"
+                             onerror="this.onerror=null; this.src='https://placehold.co/600x350/e2e8f0/94a3b8?text=实例截图2加载失败'; this.alt='实例截图2加载失败';">
+                        <p class="text-sm text-center text-slate-500 mt-1">截图 2 (显示 AMD EPYC Rome CPU)</p>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-semibold text-sky-600 mb-3">CPU 平台变化：Intel 还是 AMD？</h3>
+                <p class="text-slate-700 mb-4">一开始我真挺紧张的，觉得是不是哪里出了问题。但后来我发现，GCP 的 `e2` 系列虚拟机（包括我用的 `e2-micro`）设计上本来就支持在 **Intel** 或 **AMD EPYC** 处理器上运行。每次我启动或重启实例时，GCP 会根据它数据中心当时的资源情况和负载，自动帮我选择一个合适的物理主机。所以，**CPU 从 Intel 变成 AMD，这完全是 GCP 云平台的正常操作，是为了优化资源分配。更重要的是，它不会影响我享受免费层级的资格，也不会因此多收我一分钱。** 了解到这点，我终于可以把心放到肚子里了。</p>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-amber-700 mb-4">【重要】网络流量与计费！我以为的 200G 流量真的免费吗？</h2>
+                <p class="text-slate-700 mb-2">这绝对是我这次最大的“发现”，也是最让我惊喜的地方！我之前一直模模糊糊地以为，免费实例只有 **1 GB** 的流量额度，所以我特别担心 200G 的流量会让我破产。但是，当我看到这张最新的截图时，我的担忧瞬间烟消云散了！</p>
+                <div class="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded mb-4">
+                    <p class="font-bold">根据最新的规则，GCP 免费层级每月提供给我的网络出站流量（从北美区域发出到绝大部分其他地区），**200 GB 内都是免费的！**</p>
+                </div>
+                <p class="text-slate-700 mb-4">没错，**是 200 GB，而不是 1 GB！** 这两者简直是太棒了！这意味着，只要我把流量控制在 200GB 这个新额度内，就无需担心额外的费用了。我之前的担忧完全是基于旧信息，现在终于可以松一口气了。</p>
+
+                <div class="chart-container mb-6 bg-slate-100 p-4 rounded-lg shadow">
+                    <canvas id="trafficChart"></canvas>
+                </div>
+                <p class="text-center text-sm text-slate-500 mt-2">上图直观展示了我的 GCP 免费流量额度。</p>
+                <p class="text-slate-700">所以，我现在知道，我可以更放心地使用我的免费实例了。当然，我仍然会去 GCP 控制台的“结算”部分，**定期监控我的流量使用情况**，并设置预算提醒，这样即使将来规则有变动，我也能第一时间知道，避免任何不必要的费用。</p>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-4">我的 IP 质量体检报告</h2>
+                <p class="mb-4 text-slate-700">最后，我还想提一下我的 IP 质量体检报告。它就像是给我的服务器 IP 地址做了一次“体检”，告诉我这个 IP 的“健康状况”如何。这对于我的网站或者需要对外提供服务的应用（比如邮件服务器）来说，都挺重要的。</p>
+                
+                <h3 class="text-xl font-semibold text-sky-600 mb-3">我的报告截图（或占位符）</h3>
+                <div class="my-4 p-4 border border-slate-300 rounded-lg text-center bg-slate-50">
+                     <img src="https://report.check.place/IP/3GJA9B755.svg" 
+                          alt="IP质量体检报告" 
+                          class="max-w-full h-auto mx-auto rounded shadow"
+                          onerror="this.onerror=null; this.src='https://placehold.co/800x150/e2e8f0/94a3b8?text=IP质量报告图片无法加载或显示(SVG)'; this.alt='IP质量报告图片无法加载或显示'; document.getElementById('ipReportLoadError').style.display='block';">
+                     <p id="ipReportLoadError" style="display:none; color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem;">提示：这张 IP 报告图片可能因格式 (SVG) 或链接问题无法在此直接显示。这类报告通常会包含 IP 黑名单状态、地理位置等信息。</p>
+                </div>
+                <p class="text-slate-700">这份报告通常会显示我的 IP 有没有被列入各种黑名单、它的地理位置在哪里、是不是被识别为代理或 VPN 节点等等。如果 IP 声誉不好，我的网站可能会被一些防火墙拦截，或者我发送的邮件会被当成垃圾邮件，这都会影响我的服务。</p>
+                <p class="text-slate-700">现在我知道了，如果想检查我的 GCP 实例公共 IP 地址的质量，我可以用像 MXToolbox、IPQualityScore 这些在线工具，把我的 IP 地址输进去就能看到详细的报告了。这对我了解我的 IP 健康状况非常有帮助。</p>
+            </section>
+        </div>
+    </div>
+
+    <footer class="text-center py-8 text-slate-500 text-sm">
+        <p>本页面信息仅供参考，具体计费和政策请以 GCP 官方文档为准。</p>
+        <p>&copy; <span id="currentYear"></span> 我的 GCP 免费实例小助手</p>
+    </footer>
+
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Chart.js for Traffic Visualization
+        const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+        if (trafficCtx) {
+            new Chart(trafficCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['GCP 免费额度'], // Only show the new 200GB free tier
+                    datasets: [{
+                        label: '网络出站流量 (GB)',
+                        data: [200], // Updated to 200GB free
+                        backgroundColor: [
+                            'rgba(56, 189, 248, 0.6)' // Sky blue for free tier
+                        ],
+                        borderColor: [
+                            'rgba(56, 189, 248, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '流量 (GB)'
+                            },
+                            max: 220 // Set a bit higher than 200 for better visual
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' GB';
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: '每月网络出站流量额度',
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            },
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("Canvas element for traffic chart not found.");
+        }
+
+    </script>
+</body>
+</html>
