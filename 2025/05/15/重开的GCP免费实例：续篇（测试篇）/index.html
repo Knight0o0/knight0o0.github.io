@@ -1,1 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的GCP免费实例：AMD性能大揭秘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .bg-slate-50 { background-color: #f8fafc; }
+        .text-slate-800 { color: #1e293b; }
+        .text-sky-700 { color: #0369a1; }
+        .text-amber-700 { color: #d97706; } /* Consistent with previous article */
+        .text-green-700 { color: #15803d; }
+        .border-green-500 { border-color: #22c55e; }
+        .bg-green-50 { background-color: #f0fdf4; }
+        .code-block {
+            background-color: #1e293b; /* Dark background for code */
+            color: #e2e8f0; /* Light text color */
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre-wrap; /* Ensure line wrapping */
+            word-break: break-word; /* Break long words */
+        }
+        .code-block::before {
+            content: "Terminal Output:";
+            display: block;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #475569;
+            padding-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
 
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div class="bg-white shadow-xl rounded-lg p-6 md:p-8 mt-8">
+            <header class="mb-8 text-center">
+                <h1 class="text-4xl font-bold text-sky-700">我的 GCP 免费实例：续篇 - AMD 免费鸡的性能大揭秘！</h1>
+                <p class="text-lg text-slate-600 mt-2">跑分测试，颠覆我的想象！</p>
+            </header>
+
+            <section class="mb-8">
+                <p class="mb-4 text-slate-700">在上一篇博文里，我跟大家分享了我那台 GCP `e2-micro` 免费实例，竟然在重启后从 Intel CPU 变成了 AMD 的小插曲，以及我当时对流量计费的巨大担忧（幸好后来发现每月 **200GB 免费流量是真香！**）。既然流量的“心病”解决了，我的好奇心就彻底被点燃了：这块传说中的 AMD EPYC 处理器，在免费实例上到底能跑出怎样的性能呢？</p>
+                <p class="mb-4 text-slate-700">带着这份期待又略带紧张的心情，我决定给这台“变身”后的 AMD 免费鸡来个彻底的跑分测试！</p>
+                <div class="text-center my-6">
+                    <p class="text-slate-600 italic mb-2">不过说实话，在跑测试的时候，我心里还真有点忐忑，就怕这些跑分数据量太大，明天一早醒来就看到账单了。😂 毕竟，之前那 1GB 免费流量的“阴影”还在我心里晃悠呢！</p>
+                    <img src="https://cdn.jsdelivr.net/gh/microlong666/tieba_mobile_emotions//image_emoticon9.png"
+                         alt="大哭表情"
+                         class="mx-auto h-24 w-24 object-contain rounded-md shadow-sm"
+                         onerror="this.onerror=null; this.src='https://placehold.co/100x100/e2e8f0/94a3b8?text=表情占位符'; this.alt='无法加载表情';">
+                </div>
+                <p class="text-slate-700">但现在，有了 200GB 免费流量这个“定心丸”，我完全可以放心地让它“尽情”跑分了！下面就来看看我的测试结果吧！</p>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-4">第一轮测试：Bench.sh 全面体检</h2>
+                <p class="mb-4 text-slate-700">我先用 <code class="bg-gray-200 p-1 rounded">bench.sh</code> 脚本给我的实例做了一次全面的体检。这个脚本能帮我快速了解 CPU、内存、磁盘 I/O 和全球各地下载速度等关键性能指标。</p>
+                <div class="code-block mb-6">
+<pre>
+-------------------- A Bench.sh Script By Teddysun -------------------
+ Version            : v2024-11-11
+ Usage              : wget -qO- bench.sh | bash
+----------------------------------------------------------------------
+ CPU Model          : AMD EPYC 7B12
+ CPU Cores          : 2 @ 2249.998 MHz
+ CPU Cache          : 512 KB
+ AES-NI             : ✓ Enabled
+ VM-x/AMD-V         : ✗ Disabled
+ Total Disk         : 30.0 GB (4.7 GB Used)
+ Total Mem          : 959.7 MB (235.2 MB Used)
+ Total Swap         : 1024.0 MB (41.5 MB Used)
+ System uptime      : 0 days, 1 hour 10 min
+ Load average       : 0.06, 0.07, 0.09
+ OS                 : Ubuntu 22.04.5 LTS
+ Arch               : x86_64 (64 Bit)
+ Kernel             : 6.13.11-x64v3-xanmod1
+ TCP CC             : bbr
+ Virtualization     : KVM
+ IPv4/IPv6          : ✓ Online / ✗ Offline
+ Organization       : AS19527 Google LLC
+ Location           : North Charleston / US
+ Region             : South Carolina
+----------------------------------------------------------------------
+ I/O Speed(1st run) : 104 MB/s
+ I/O Speed(2nd run) : 107 MB/s
+ I/O Speed(3rd run) : 107 MB/s
+ I/O Speed(average) : 106.0 MB/s
+----------------------------------------------------------------------
+ Node Name          Upload Speed         Download Speed         Latency   
+ Paris, FR          949.25 Mbps          2244.79 Mbps           96.25 ms  
+ Amsterdam, NL      926.54 Mbps          2562.43 Mbps           97.61 ms  
+ Hong Kong, CN      3.76 Mbps            4.40 Mbps              223.54 ms 
+ Singapore, SG      923.20 Mbps          1517.49 Mbps           233.95 ms 
+ Tokyo, JP          487.79 Mbps          3576.21 Mbps           169.72 ms 
+----------------------------------------------------------------------
+ Finished in        : 3 min 12 sec
+ Timestamp          : 2025-04-18 21:20:05 CST
+----------------------------------------------------------------------
+</pre>
+                </div>
+                <h3 class="text-xl font-semibold text-sky-600 mb-3">我的解读：</h3>
+                <ul class="list-disc list-inside text-slate-700 mb-4">
+                    <li><strong>CPU 型号：AMD EPYC 7B12！</strong> 果然是 AMD！这可是服务器级别的处理器，能免费开出来，真是运气爆棚！</li>
+                    <li><strong>CPU 频率：</strong> 2 核 @ 2.25 GHz，对于免费实例来说，这个频率表现非常不错了。</li>
+                    <li><strong>内存/硬盘：</strong> 符合 `e2-micro` 的标准配置，1GB 内存，30GB 硬盘。</li>
+                    <li><strong>磁盘 I/O：平均 106.0 MB/s。</strong> 这个速度对于普通的云硬盘来说，算是在一个中规中矩的水平。</li>
+                    <li><strong>网络速度：</strong> 哇塞！到欧洲节点（巴黎、阿姆斯特丹）的下载速度简直惊人，都达到了 <strong>2 Gbps 左右</strong>！上传速度也接近 1 Gbps。这表明我的南卡节点在到欧洲方向的网络非常好。不过，<strong>到香港和东京的速度就差强人意了</strong>，特别是香港，只有几 Mbps，这让我有点意外。</li>
+                </ul>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold text-sky-700 mb-4">第二轮测试：spiritysdx 融合怪测评 - 深度剖析</h2>
+                <p class="mb-4 text-slate-700">为了更全面地了解这台实例，我又跑了 <code class="bg-gray-200 p-1 rounded">spiritysdx 融合怪测评</code>。这个脚本提供了更详细的 CPU、内存、磁盘 IOPS 以及流媒体解锁等信息，非常实用。</p>
+                <div class="code-block mb-6">
+<pre>
+                    测评频道: https://t.me/vps_reviews         
+VPS融合怪版本：2025.04.12
+Shell项目地址：https://github.com/spiritLHLS/ecs
+Go项目地址 [推荐]：https://github.com/oneclickvirt/ecs
+---------------------基础信息查询--感谢所有开源项目---------------------
+ CPU 型号          : AMD EPYC 7B12
+ CPU 核心数        : 2
+ CPU 频率          : 2249.998 MHz
+ CPU 缓存          : L1: 32.00 KB / L2: 512.00 KB / L3: 16.00 MB
+ AES-NI指令集      : ✔ Enabled
+ VM-x/AMD-V支持    : ❌ Disabled
+ 内存              : 256.99 MiB / 959.73 MiB
+ Swap              : 45.67 MiB / 1024.00 MiB
+ 硬盘空间          : 4.68 GiB / 28.89 GiB
+ 启动盘路径        : /dev/sda1
+ 系统在线时间      : 0 days, 1 hour 25 min
+ 负载              : 0.52, 0.20, 0.13
+ 系统              : Ubuntu 22.04.5 LTS (x86_64)
+ 架构              : x86_64 (64 Bit)
+ 内核              : 6.13.11-x64v3-xanmod1
+ TCP加速方式       : bbr
+ 虚拟化架构        : KVM
+ NAT类型           : Full Cone
+ IPV4 ASN          : AS19527 Google LLC
+ IPV4 位置         : North Charleston / South Carolina / US
+----------------------CPU测试--通过sysbench测试-------------------------
+ -> CPU 测试中 (Fast Mode, 1-Pass @ 5sec)
+ 1 线程测试(单核)得分:        3667 Scores
+ 2 线程测试(多核)得分:        4139 Scores
+---------------------内存测试--感谢lemonbench开源-----------------------
+ -> 内存测试 Test (Fast Mode, 1-Pass @ 5sec)
+ 单线程读测试:        43397.81 MB/s
+ 单线程写测试:        25621.82 MB/s
+------------------磁盘dd读写测试--感谢lemonbench开源--------------------
+ -> 磁盘IO测试中 (4K Block/1M Block, Direct Mode)
+ 测试操作        写速度                    读速度
+ 100MB-4K Block        6.8 MB/s (1669 IOPS, 15.34s)        40.2 MB/s (9818 IOPS, 2.61s)
+ 1GB-1M Block        104 MB/s (100 IOPS, 10.04s)        127 MB/s (120 IOPS, 8.29s)
+---------------------磁盘fio读写测试--感谢yabs开源----------------------
+Block Size | 4k            (IOPS) | 64k            (IOPS)
+ ------    | ---            ----  | ----            ---- 
+Read       | 408.00 KB/s    (102) | 5.90 MB/s        (92)
+Write      | 430.00 KB/s    (107) | 6.19 MB/s        (96)
+Total      | 838.00 KB/s    (209) | 12.10 MB/s       (188)
+           |                      |                      
+Block Size | 512k          (IOPS) | 1m            (IOPS)
+ ------    | ---            ----  | ----            ---- 
+Read       | 27.53 MB/s      (53) | 37.22 MB/s      (36)
+Write      | 29.67 MB/s      (57) | 39.89 MB/s      (38)
+Total      | 57.20 MB/s     (110) | 77.11 MB/s      (74)
+------------流媒体解锁--基于oneclickvirt/CommonMediaTests开源-----------
+以下测试的解锁地区是准确的，但是不是完整解锁的判断可能有误，这方面仅作参考使用
+----------------Netflix-----------------
+[IPV4]
+您的出口IP完整解锁Netflix，支持非自制剧的观看
+NF所识别的IP地域信息：美国
+[IPV6]
+您的网络可能没有正常配置IPv6，或者没有IPv6网络接入
+----------------Youtube-----------------
+[IPV4]
+连接方式: Youtube Video Server
+视频缓存节点地域: 美国  阿特兰大(ATL14S26)
+[IPV6]
+Youtube在您的出口IP所在的国家不提供服务
+---------------DisneyPlus---------------
+[IPV4]
+当前IPv4出口所在地区即将开通DisneyPlus
+[IPV6]
+DisneyPlus在您的出口IP所在的国家不提供服务
+解锁Netflix，Youtube，DisneyPlus上面和下面进行比较，不同之处自行判断
+----------------流媒体解锁--感谢RegionRestrictionCheck开源--------------
+ 以下为IPV4网络测试，若无IPV4网络则无输出
+============[ Multination ]============
+ Dazn:                    Yes (Region: US)
+ Disney+:                 No (IP Banned By Disney+ 1)
+ Netflix:                 Yes (Region: US)
+ YouTube Premium:           Yes (Region: US)
+ Amazon Prime Video:          Yes (Region: US)
+ TVBAnywhere+:                Yes
+ Spotify Registration:          Yes (Region: US)
+ OneTrust Region:           US [South Carolina]
+ iQyi Oversea Region:         US
+ Bing Region:                US (Risky)
+ Apple Region:                US
+ YouTube CDN:                [ATL14S26] in [Atlanta, GA]
+ Netflix Preferred CDN:         Miami, FL
+ ChatGPT:                 Yes
+ Google Gemini:                Yes (Region: USA)
+ Claude:                No
+ Wikipedia Editability:         No
+ Google Play Store:           United States 
+ Google Search CAPTCHA Free:        Yes
+ Steam Currency:            USD
+ ---Forum---
+ Reddit:                No
+=======================================
+ 以下为IPV6网络测试，若无IPV6网络则无输出
+---------------TikTok解锁--感谢lmc999的源脚本及fscarmen PR--------------
+ Tiktok Region:        【US】
+-------------IP质量检测--基于oneclickvirt/securityCheck使用-------------
+数据仅作参考，不代表100%准确，如果和实际情况不一致请手动查询多个数据库比对
+以下为各数据库编号，输出结果后将自带数据库来源对应的编号
+ipinfo数据库  [0] | scamalytics数据库 [1] | virustotal数据库    [2] | abuseipdb数据库    [3] | ip2location数据库     [4]
+ip-api数据库  [5] | ipwhois数据库      [6] | ipregistry数据库    [7] | ipdata数据库      [8] | db-ip数据库         [9]
+ipapiis数据库 [A] | ipapicom数据库     [B] | bigdatacloud数据库 [C] | cheervision数据库 [D] | ipqualityscore数据库 [E]
+IPV4:
+安全得分:
+声誉(越高越好): 0 [2] 
+信任得分(越高越好): 0 [8] 
+VPN得分(越低越好): 100 [8] 
+代理得分(越低越好): 100 [8] 
+社区投票-无害: 0 [2] 
+社区投票-恶意: 0 [2] 
+威胁得分(越低越好): 100 [8] 
+欺诈得分(越低越好): 65 [E] 12 [1]
+滥用得分(越低越好): 0 [3] 
+ASN滥用得分(越低越好): 0.0002 (Very Low) [A] 
+公司滥用得分(越低越好): 0.0016 (Low) [A] 
+黑名单记录统计:(有多少黑名单网站有记录):
+无害记录数: 0 [2]  恶意记录数: 0 [2]  可疑记录数: 0 [2]  无记录数: 94 [2]  
+安全信息:
+使用类型: DataCenter/WebHosting/Transit [3] unknown [C] hosting [0 7 8 A]
+公司类型: hosting [0 7 A] 
+是否云提供商: Yes [7 D] 
+是否数据中心: No [C] Yes [0 1 5 6 8 A]
+是否移动设备: No [5 A C] Yes [E]
+是否代理: Yes [E] No [0 1 4 5 6 7 8 A C D]
+是否VPN: Yes [A E] No [0 1 6 7 C D]
+是否Tor: No [0 1 3 6 7 8 A C D E] 
+是否Tor出口: No [1 7 D] 
+是否网络爬虫: No [A E] 
+是否匿名: No [1 6 7 8 D] 
+是否攻击者: No [7 8 D] 
+是否滥用者: No [7 8 A C D E] 
+是否威胁: No [7 8 C D] 
+是否中继: No [0 7 8 C D] 
+是否Bogon: No [7 8 A C D] 
+是否机器人: No [E] 
+DNS-黑名单: 313(Total_Check) 0(Clean) 5(Blacklisted) 22(Other) 
+Google搜索可行性：NO
+-------------邮件端口检测--基于oneclickvirt/portchecker开源-------------
+Platform  SMTP  SMTPS POP3  POP3S IMAP  IMAPS
+LocalPort ✔     ✔     ✔     ✔     ✔     ✔   
+QQ        ✘     ✔     ✔     ✘     ✔     ✘   
+163       ✘     ✔     ✔     ✘     ✔     ✘   
+Sohu      ✘     ✔     ✔     ✘     ✔     ✘   
+Yandex    ✘     ✔     ✔     ✘     ✔     ✘   
+Gmail     ✘     ✔     ✘     ✘     ✘     ✘   
+Outlook   ✘     ✘     ✔     ✘     ✔     ✘   
+Office365 ✘     ✘     ✔     ✘     ✔     ✘   
+Yahoo     ✘     ✔     ✘     ✘     ✘     ✘   
+MailCOM   ✘     ✔     ✔     ✘     ✔     ✘   
+MailRU    ✘     ✔     ✘     ✘     ✔     ✘   
+AOL       ✘     ✔     ✘     ✘     ✘     ✘   
+GMX       ✘     ✘     ✔     ✘     ✔     ✘   
+Sina      ✘     ✔     ✔     ✘     ✔     ✘   
+Apple     ✘     ✘     ✘     ✘     ✘     ✘   
+FastMail  ✘     ✔     ✘     ✘     ✘     ✘   
+ProtonMail✘     ✘     ✘     ✘     ✘     ✘   
+MXRoute   ✘     ✘     ✔     ✘     ✔     ✘   
+Namecrane ✘     ✔     ✔     ✘     ✔     ✘   
+XYAMail   ✘     ✘     ✘     ✘     ✘     ✘   
+ZohoMail  ✘     ✔     ✘     ✘     ✘     ✘   
+Inbox_eu  ✘     ✔     ✔     ✘     ✘     ✘   
+Free_fr   ✘     ✔     ✔     ✘     ✔     ✘   
+----------------三网回程--基于oneclickvirt/backtrace开源----------------
+北京电信v4 219.141.140.10  检测不到回程路由节点的IPV4地址
+北京联通v4 202.106.195.68  检测不到回程路由节点的IPV4地址
+北京移动v4 221.179.155.161 检测不到回程路由节点的IPV4地址
+上海电信v4 202.96.209.133          电信163    [普通线路] 
+上海联通v4 210.22.97.1    检测不到回程路由节点的IPV4地址
+上海移动v4 211.136.112.200 检测不到回程路由节点的IPV4地址
+广州电信v4 58.60.188.222    检测不到回程路由节点的IPV4地址
+广州联通v4 210.21.196.6    检测不到回程路由节点的IPV4地址
+广州移动v4 120.196.165.24            移动CMI    [普通线路] 
+成都电信v4 61.139.2.69              电信163    [普通线路] 
+成都联通v4 119.6.6.6                联通4837   [普通线路] 
+成都移动v4 211.137.96.205            移动CMI    [普通线路] 移动CMIN2  [精品线路] 
+准确线路自行查看详细路由，本测试结果仅作参考
+同一目标地址多个线路时，可能检测已越过汇聚层，除了第一个线路外，后续信息可能无效
+---------------------回程路由--感谢fscarmen开源及PR---------------------
+依次测试电信/联通/移动经过的地区及线路，核心程序来自nexttrace，请知悉!
+广州电信 58.60.188.222
+ 
+广州联通 210.21.196.6
+381.19 ms   AS17623 中国 广东 深圳 宝安区 chinaunicom.cn 联通
+广州移动 120.196.165.24
+69.39 ms    AS58453 [CMI-INT] 美国 加利福尼亚 洛杉矶 cmi.chinamobile.com 移动
+244.89 ms   AS58453 [CMI-INT] 中国 广东 广州 cmi.chinamobile.com 移动
+296.44 ms   AS9808 [CMNET] 中国 广东 广州 I-C chinamobileltd.com 移动
+251.40 ms   AS9808 [CMNET] 中国 广东 广州 chinamobileltd.com 移动
+254.76 ms   AS9808 [CMNET] 中国 广东 广州 chinamobileltd.com 移动
+262.58 ms   AS9808 [CMNET] 中国 广东 广州 chinamobileltd.com 移动
+259.19 ms   AS56040 [APNIC-AP] 中国 广东 深圳 gd.10086.cn 移动
+--------------------自动更新测速节点列表--本脚本原创--------------------
+位置     上传速度   下载速度   延迟
+Speedtest.net  243.41Mbps  673.48Mbps  25.1531.0029.00ms 
+洛杉矶     133.99Mbps  233.46Mbps  67.4672.0067.00ms 
+法兰克福   114.15Mbps  206.61Mbps  99.07104.00104.00ms 
+电信浙江   7.80Mbps  26.02Mbps  238.00248.00674.00ms 
+电信浙江   4.83Mbps  36.22Mbps  278.37240.00240.00ms 
+移动杭州5G   1.60Mbps  62.68Mbps  274.39276.00294.00ms 
+移动Fujian   8.85Mbps  15.38Mbps  329.08460.00255.00ms 
+------------------------------------------------------------------------
+ 总共花费     : 9 分 28 秒
+ 时间         : Fri Apr 18 21:40:19 CST 2025
+------------------------------------------------------------------------
+</pre>
+                </div>
+                <h3 class="text-xl font-semibold text-sky-600 mb-3">我的解读：</h3>
+                <ul class="list-disc list-inside text-slate-700 mb-4">
+                    <li><strong>CPU 性能：</strong> sysbench 的单核和多核测试分数分别为 3667 和 4139。对于一个共享 2 vCPU 的 `e2-micro` 实例来说，这表现相当强劲！我之前开出的 Intel CPU 普遍性能比较一般，这次的 AMD 简直是性能**“小钢炮”**！</li>
+                    <li><strong>内存性能：</strong> 单线程读写速度非常高，分别达到 43 GB/s 和 25 GB/s。这表明内存带宽非常充足，对于需要频繁读写内存的应用（比如缓存、数据库等）会很有帮助。</li>
+                    <li><strong>磁盘 I/O (DD & FIO)：</strong>
+                        <ul class="list-circle list-inside ml-4">
+                            <li>DD 测试显示，1GB 大文件的顺序读写速度在 100-127 MB/s 之间，这和 <code class="bg-gray-200 p-1 rounded">bench.sh</code> 的结果一致。</li>
+                            <li>FIO 测试则提供了随机读写和不同块大小下的 IOPS 和速度。可以看到，小块（4K）的随机读写 IOPS 较低，但随着块大小增加，速度也随之提升。总体来说，这块硬盘足以满足大部分免费实例的日常需求。</li>
+                        </ul>
+                    </li>
+                    <li><strong>流媒体解锁：</strong>
+                        <ul class="list-circle list-inside ml-4">
+                            <li><strong>Netflix：</strong> IPV4 显示“完整解锁Netflix，支持非自制剧的观看”，这点太棒了！看来可以愉快地看剧了。</li>
+                            <li><strong>YouTube Premium：</strong> 也显示为解锁！</li>
+                            <li><strong>Disney+：</strong> 有点可惜，显示 IP 被禁。</li>
+                            <li><strong>TikTok：</strong> 解锁地区为【US】，这对于需要运营 TikTok 的朋友来说是个好消息。</li>
+                            <li><strong>ChatGPT/Google Gemini：</strong> 都可以直接访问，这对于 AI 工具使用者来说非常方便。</li>
+                        </ul>
+                    </li>
+                    <li><strong>IP 质量检测：</strong>
+                        <ul class="list-circle list-inside ml-4">
+                            <li>报告中显示 IP 有些“风险”标记，例如 VPN 得分和代理得分都是 100，并且提示“是否代理：Yes”、“是否VPN：Yes”。这表明这个 IP 可能被一些服务商识别为代理或 VPN 节点。这可能会影响某些服务的访问，比如 Google 搜索可行性显示为“NO”，Reddit 也无法访问。</li>
+                            <li>DNS 黑名单有 5 条记录，这说明这个 IP 的确在某些黑名单中。</li>
+                            <li>这些信息提示我，如果我打算用这个 IP 提供一些对 IP 纯净度要求高的服务，可能需要格外注意或考虑更换 IP。</li>
+                        </ul>
+                    </li>
+                    <li><strong>邮件端口检测：</strong> 本地端口基本都开放，但对于主流的邮件服务商，比如 Gmail、Outlook、Apple 等，SMTP 端口都是关闭的。这意味着，如果我想用这个实例搭建邮件服务器对外发送邮件，可能会遇到阻碍。</li>
+                    <li><strong>三网回程及回程路由：</strong>
+                        <ul class="list-circle list-inside ml-4">
+                            <li>到中国大陆的测试节点中，大部分都显示“检测不到回程路由节点的IPV4地址”，这可能表示路由追踪不完整或存在障碍。</li>
+                            <li>能检测到的，比如上海电信、成都电信走的是“电信163”普通线路，广州移动、成都移动走的是“移动CMI”普通线路，成都移动甚至有“移动CMIN2”精品线路。这说明我的实例到部分中国大陆地区的回程线路还不错。</li>
+                            <li>从详细的回程路由来看，到广州移动的路径经过了美国洛杉矶的 CMI-INT 节点，然后才回到中国大陆，延迟会相对较高。</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <hr class="my-8 border-slate-200">
+
+            <section>
+                <h2 class="text-2xl font-semibold text-amber-700 mb-4">我的总结：这颗 AMD CPU，有点出乎意料！</h2>
+                <p class="mb-4 text-slate-700">两次跑分测试下来，我真心觉得这颗 <strong>AMD EPYC 7B12 CPU 有点猛啊！</strong> 性能表现远超我之前重开时遇到的 Intel 垃圾 CPU。特别是它的 CPU 跑分和内存读写速度，对于一个免费的 <code class="bg-gray-200 p-1 rounded">e2-micro</code> 实例来说，简直是惊喜！</p>
+                <p class="mb-4 text-slate-700">之前我一直想不通，为什么 GCP 会给我分配 AMD 的 CPU，而不是常见的 Intel。现在看来，这可能真的是 GCP 为了优化资源分配，给我分配到了一个性能更强的物理机。对于我们这些免费用户来说，这简直是天上掉馅饼！</p>
+                <p class="mb-4 text-slate-700">当然，IP 质量和邮件端口的检测结果也给我提了个醒：虽然实例性能强劲，但如果需要进行特定的网络活动（比如搭建邮件服务器或访问对 IP 纯净度要求高的服务），可能需要对 IP 进行额外的考量。</p>
+                <p class="text-slate-700">总的来说，我对这次“开出”的 AMD 免费鸡非常满意！它为我的日常学习和一些轻量级应用提供了稳定且超出预期的性能支持。希望我的这些测试数据，也能为正在或打算使用 GCP 免费实例的朋友提供一些参考！</p>
+            </section>
+        </div>
+        </div>
+
+    <footer class="text-center py-8 text-slate-500 text-sm">
+        <p>本页面信息仅供参考，具体计费和政策请以 GCP 官方文档为准。</p>
+        <p>&copy; <span id="currentYear2"></span> 我的 GCP 免费实例小助手</p>
+    </footer>
+
+    <script>
+        // Ensure this script runs after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update the year for the new footer
+            document.getElementById('currentYear2').textContent = new Date().getFullYear();
+
+            // The Chart.js script for the previous article would remain in its own script block
+            // if it was placed there. If not, ensure it's still present somewhere.
+            // For this new article, we don't have a new chart, so no new chart script needed here.
+        });
+    </script>
+</body>
+</html>
