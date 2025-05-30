@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scaleway 星尘 1C/1G/1G 小鸡部署 Alpine Linux 的完整教程</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }
+    pre, code { white-space: pre-wrap; word-break: break-word; background: #f6f8fa; padding: 10px; border-radius: 4px; display: block; overflow-x: auto; }
+    h1, h2 { color: #222; }
+  </style>
+</head>
+<body>
+  <h1>Scaleway 星尘 1C/1G/1G 小鸡部署 Alpine Linux 的完整教程</h1>
+  <p><strong>警告：</strong>每次创建、删除、开关机等操作一律计费 €0.01（约 ¥0.08 元），系统有 bug 时责任自负，提交工单也无法取消费用。建议在清楚操作流程后再动手！</p>
+  
+  <p>推荐配置：3 台 VPS（法国、荷兰、波兰）年费约 ¥43 人民币（基于 €0.15/月/台），性价比极高。</p>
+  <hr>
+
+  <h2>一、线路建议</h2>
+  <ul>
+    <li>法国（fr-par-1）/ 荷兰（nl-ams-1）：网络线路稳定</li>
+    <li>波兰（pl-waw-2）：性能略好</li>
+  </ul>
+
+  <h2>二、准备工作</h2>
+  <ol>
+    <li>登录 Scaleway 控制台 → 右上头像 → SSH keys → 添加你的 SSH 公钥</li>
+    <li>如果控制台显示无法创建实例，使用 CLI 命令创建：</li>
+  </ol>
+  <pre><code>scw instance server create zone=fr-par-1 root-volume=local:10GB name=fr type=STARDUST1-S ipv6=true ip=none
+scw instance server create zone=nl-ams-1 root-volume=local:10GB name=nl type=STARDUST1-S ipv6=true ip=none
+scw instance server create zone=pl-waw-2 root-volume=local:10GB name=pl type=STARDUST1-S ipv6=true ip=none</code></pre>
+  <p>⚠️ 如果缺少 <code>type=STARDUST1-S</code> 参数，可能会开出大鸡，费用暴涨！</p>
+
+  <h2>三、设置 IPv6 和防火墙</h2>
+  <ul>
+    <li>控制台 → 实例详情页 → Attach Flexible IP → 创建 IPv6 地址</li>
+    <li>控制台 → Security Group → 添加全部协议的 Ingress/Egress Accept 规则</li>
+  </ul>
+
+  <h2>四、重建硬盘为 1GB 并安装系统</h2>
+  <ol>
+    <li>关机 → Detach & Delete 默认 10GB 本地盘</li>
+    <li>创建新的 1GB 本地磁盘 → Attach 到实例</li>
+    <li>进入 Rescue 模式 → 启动实例 → 使用 SSH 登录</li>
+    <li>刷入 Alpine Linux ISO：</li>
+  </ol>
+  <pre><code>parted /dev/vda mklabel gpt
+wget -qO- https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/x86_64/alpine-virt-3.20.1-x86_64.iso | dd of=/dev/vda</code></pre>
+
+  <h2>五、本地启动并登录 Console 安装系统</h2>
+  <ol>
+    <li>设置 Advanced Settings → Use local boot → Boot from 1GB 磁盘</li>
+    <li>启动后使用 Console 登录（输入 root 回车）</li>
+    <li>运行以下命令准备安装：</li>
+  </ol>
+  <pre><code>mkdir /media/setup
+cp -a /media/vda/* /media/setup
+mkdir /lib/setup
+cp -a /.modloop/* /lib/setup
+/etc/init.d/modloop stop
+umount /dev/vda
+mv /media/setup/* /media/vda/
+mv /lib/setup/* /.modloop/
+setup-alpine</code></pre>
+
+  <h2>六、setup-alpine 指南</h2>
+  <ul>
+    <li>主机名：任意</li>
+    <li>网络设置：eth0（编辑 IPv6 静态地址）</li>
+    <li>密码设置：设置 root 密码</li>
+    <li>时区：根据地区设置（如 Europe/Paris）</li>
+    <li>SSH 服务：选 openssh</li>
+    <li>磁盘选择：vda，安装类型 sys</li>
+  </ul>
+
+  <h2>七、DNS 与软件源设置</h2>
+  <pre><code>vi /etc/resolv.conf</code>
+填入：
+<code>nameserver 2001:4860:4860::6464</code>
+
+添加源：
+<pre><code>echo "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main" >> /etc/apk/repositories
+echo "http://dl-cdn.alpinelinux.org/alpine/latest-stable/community" >> /etc/apk/repositories</code></pre>
+
+  <h2>八、安装引导和实用工具</h2>
+  <pre><code>apk update
+apk add dosfstools grub-efi
+setup-disk -s 0
+apk add sudo curl wget bash tar unzip</code></pre>
+
+  <h2>九、可选：更改 SSH 端口、开启 Warp、开启 BBR</h2>
+  <pre><code># 修改端口
+vi /etc/ssh/sshd_config
+rc-service sshd restart
+
+# Warp IPv6 转 IPv4
+wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh && bash menu.sh 4
+
+# 启用 BBR
+modprobe tcp_bbr
+echo "tcp_bbr" >> /etc/modules-load.d/bbr.conf
+echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p</code></pre>
+
+  <h2>十、Fail2ban 安装配置</h2>
+  <pre><code>apk add fail2ban
+vi /etc/fail2ban/jail.local</code></pre>
+  <p>添加如下内容：</p>
+  <pre><code>[sshd]
+enabled = true
+port = ssh
+logpath = /var/log/auth.log
+maxretry = 5</code></pre>
+  <pre><code>rc-service fail2ban start</code></pre>
+
+  <h2>十一、费用总结</h2>
+  <p>单台：€0.15/月 ≈ ¥1.2 元</p>
+  <p>三台：€0.45/月 ≈ ¥3.6 元，年费约 ¥43（视汇率波动）</p>
+
+  <hr>
+  <p>到此为止，你已完成 Scaleway 星尘 1C/1G/1G 上 Alpine Linux 的完整部署。现在可以安装探针、部署服务或作为轻量小鸡折腾测试使用！</p>
+</body>
+</html>
